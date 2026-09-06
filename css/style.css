@@ -219,7 +219,7 @@ main, header, footer { position: relative; z-index: 1; }
 }
 /* text fallback if the logo image can't load */
 .logo-wrap { transform: translateZ(80px); }
-.logo-text { display: none; line-height: 0.85; transform: rotate(-4deg); }
+.logo-text { display: none; margin: 0; font-weight: normal; line-height: 0.85; transform: rotate(-4deg); }
 .logo-wrap--text .hero__logo { display: none; }
 .logo-wrap--text .logo-text { display: block; }
 .logo-text__top {
