@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#101010">
+  <title>MIMU Sniper — Official Unofficial</title>
+  <meta name="description" content="MIMU Sniper. Official unofficial hub for MIMU On Ape — radio, games, market ticker.">
+  <meta property="og:title" content="MIMU Sniper">
+  <meta property="og:description" content="Official unofficial hub for MIMU On Ape.">
+  <meta property="og:image" content="assets/logo.png">
+  <link rel="icon" href="assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Space+Grotesk:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== market ticker ===== -->
+  <div class="ticker" id="ticker" aria-label="MIMU On Ape market data">
+    <div class="ticker__track" id="tickerTrack">
+      <span class="ticker__item"><i class="ticker__dot"></i>LOADING MARKET DATA…</span>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <a class="topbar__brand" href="index.html">MIMU<span>SNIPER</span></a>
+    <nav>
+      <a href="#games">Games</a>
+      <a href="https://x.com/RadioMimu" target="_blank" rel="noopener">Radio</a>
+      <a href="https://x.com/mimuonape" target="_blank" rel="noopener">X</a>
+      <button class="lofi" id="lofiBtn" aria-pressed="false" title="Toggle theme music">
+        <span class="lofi__bars"><i></i><i></i><i></i><i></i></span>
+        <span id="lofiLabel">Music off</span>
+      </button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ===== scene: hero + games share one parallax world ===== -->
+    <div class="scene" id="scene">
+      <!-- deepest layer: the animated collection banner, washed into the paper -->
+      <div class="hero__layer hero__banner" data-depth="0.08">
+        <img src="assets/banner.webp" alt=""
+             onerror="if(!this.dataset.retry){this.dataset.retry=1;this.src='https://i2c.seadn.io/collection/mimuonape/image_type_hero_desktop/41e8388a5399b2e7240aa6e9c4b144/a541e8388a5399b2e7240aa6e9c4b144.gif?w=2000'}else{this.parentNode.remove()}">
+      </div>
+      <div class="hero__layer hero__lines"   data-depth="0.15"></div>
+      <div class="hero__layer hero__halftone" data-depth="0.30"></div>
+      <div class="hero__layer" data-depth="0.45">
+        <div class="splash splash--blue"></div>
+        <div class="splash splash--orange"></div>
+        <div class="splash splash--magenta"></div>
+        <div class="splash splash--crimson"></div>
+      </div>
+
+      <!-- MIMU characters floating at depth (images from the collection; swap freely) -->
+      <div class="hero__layer" data-depth="0.55" id="mimuLayer">
+        <figure class="mimu mimu--1" style="--c: var(--purple)"><img alt="" loading="lazy" src="assets/mimu-1.jpg" onerror="this.parentNode.classList.add('mimu--noimg')"><figcaption>MIMU</figcaption></figure>
+        <figure class="mimu mimu--2" style="--c: var(--blue)"><img alt="" loading="lazy" src="assets/mimu-2.jpg" onerror="this.parentNode.classList.add('mimu--noimg')"><figcaption>MIMU</figcaption></figure>
+        <figure class="mimu mimu--3" style="--c: var(--crimson)"><img alt="" loading="lazy" src="assets/mimu-3.jpg" onerror="this.parentNode.classList.add('mimu--noimg')"><figcaption>MIMU</figcaption></figure>
+        <figure class="mimu mimu--4" style="--c: var(--orange)"><img alt="" loading="lazy" src="assets/mimu-4.jpg" onerror="this.parentNode.classList.add('mimu--noimg')"><figcaption>MIMU</figcaption></figure>
+        <figure class="mimu mimu--5" style="--c: var(--magenta)"><img alt="" loading="lazy" src="assets/mimu-5.jpg" onerror="this.parentNode.classList.add('mimu--noimg')"><figcaption>MIMU</figcaption></figure>
+        <figure class="mimu mimu--6" style="--c: var(--yellow)"><img alt="" loading="lazy" src="assets/mimu-6.jpg" onerror="this.parentNode.classList.add('mimu--noimg')"><figcaption>MIMU</figcaption></figure>
+        <figure class="mimu mimu--7" style="--c: var(--blue)"><img alt="" loading="lazy" src="assets/mimu-7.jpg" onerror="this.parentNode.classList.add('mimu--noimg')"><figcaption>MIMU</figcaption></figure>
+        <figure class="mimu mimu--8" style="--c: var(--crimson)"><img alt="" loading="lazy" src="assets/mimu-8.jpg" onerror="this.parentNode.classList.add('mimu--noimg')"><figcaption>MIMU</figcaption></figure>
+      </div>
+
+      <div class="hero__layer" data-depth="0.70">
+        <div class="debris debris--1"></div>
+        <div class="debris debris--2"></div>
+        <div class="debris debris--3"></div>
+        <div class="debris debris--4"></div>
+        <div class="debris debris--5"></div>
+      </div>
+
+    <section class="hero" id="hero">
+      <div class="hero__content" id="heroContent">
+        <div class="hero__status">System Online</div>
+        <div class="logo-wrap" id="logoWrap">
+          <img class="hero__logo" id="heroLogo"
+               src="assets/logo.png"
+               onerror="if(!this.dataset.retry){this.dataset.retry=1;this.src='https://media.base44.com/images/public/69f2e06e2588cff9c6247a97/448467fd2_hf_20260521_121850_3a7d6436-0ce3-44e0-b19b-424c8a406635.png'}else{document.getElementById('logoWrap').classList.add('logo-wrap--text')}"
+               alt="Official Unofficial MIMU Sniper">
+          <div class="logo-text" aria-hidden="true">
+            <span class="logo-text__top">Official Unofficial</span>
+            <span class="logo-text__main">MIMU</span>
+            <span class="logo-text__main logo-text__main--2">SNIPER</span>
+          </div>
+        </div>
+        <div class="stickers" id="stickers">
+          <a class="sticker sticker--radio" data-say="radio" href="https://x.com/RadioMimu" target="_blank" rel="noopener" style="--r: -7deg; --c: var(--yellow)">
+            <img src="assets/sticker-radio.png" alt="MIMU Radio boombox">
+            <span class="sticker__sfx">SATURDAYS &amp; SUNDAYS</span>
+            <span class="sticker__label">Mimu Radio</span>
+          </a>
+          <a class="sticker sticker--opensea" data-say="opensea" href="https://opensea.io/collection/mimuonape" target="_blank" rel="noopener" style="--r: 4deg; --c: var(--blue)">
+            <img src="assets/sticker-opensea.png" alt="OpenSea">
+            <span class="sticker__sfx">GET YOURS TODAY</span>
+            <span class="sticker__label">Mimu OpenSea</span>
+          </a>
+          <a class="sticker sticker--avatar" data-say="avatar" href="https://www.mimuonape.xyz/mint" target="_blank" rel="noopener" style="--r: -3deg; --c: var(--purple)">
+            <img src="assets/sticker-avatar.png" alt="Mimu Avatar">
+            <span class="sticker__sfx">UPGRADE</span>
+            <span class="sticker__label">Mimu Avatar</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== games ===== -->
+    <section class="section" id="games">
+      <div class="section__head">
+        <h2 class="section__title">Games</h2>
+              </div>
+
+      <div class="mp" id="mangaPage">
+        <a class="mp__panel mp__panel--a" href="mimu-float-race.html" style="--c: var(--blue)" data-sfx="SPLASH!!">
+          <img class="mp__art" src="assets/float-race-cover.jpg" alt="Three MIMUs racing toward the finish">
+          <span class="mp__num">01</span>
+          <span class="mp__cap">Pick a MIMU. Watch them float. Cross the line first.</span>
+          <span class="mp__sfx">SPLASH!!</span>
+          <span class="mp__title">Mimu Float Race</span>
+          <span class="mp__play"><b>Play</b><i>Live</i></span>
+        </a>
+        <a class="mp__panel mp__panel--b" href="mimu-rocket.html" style="--c: var(--magenta)" data-sfx="BLAST OFF!">
+          <img class="mp__art" src="assets/rocket-cover.jpg" alt="Three MIMUs hugging rockets, blasting off">
+          <span class="mp__num">04</span>
+          <span class="mp__sfx">BLAST OFF!</span>
+          <span class="mp__title">Rocket Mimu</span>
+          <span class="mp__play"><b>Play</b><i>Live</i></span>
+        </a>
+        <a class="mp__panel mp__panel--c" href="mimu-wheel.html" style="--c: var(--purple)" data-sfx="SPIN!">
+          <img class="mp__art" src="assets/wheel-cover.jpg" alt="A giant prize wheel">
+          <span class="mp__num">05</span>
+          <span class="mp__sfx">SPIN!</span>
+          <span class="mp__title">Mimu Wheel</span>
+          <span class="mp__play"><b>Play</b><i>Live</i></span>
+        </a>
+        <div class="mp__panel mp__panel--d mp__panel--wip mp__panel--dead" aria-disabled="true" style="--c: var(--orange)" data-sfx="BRB!">
+          <span class="mp__glyph">TB</span>
+          <span class="mp__tape mp__tape--1"><i>UNDER CONSTRUCTION &nbsp;•&nbsp; UNDER CONSTRUCTION &nbsp;•&nbsp; UNDER CONSTRUCTION &nbsp;•&nbsp; UNDER CONSTRUCTION &nbsp;•&nbsp; UNDER CONSTRUCTION &nbsp;•&nbsp; UNDER CONSTRUCTION &nbsp;•&nbsp; UNDER CONSTRUCTION &nbsp;•&nbsp; UNDER CONSTRUCTION &nbsp;•&nbsp;</i></span>
+          <span class="mp__tape mp__tape--2"><i>BACK SOON &nbsp;•&nbsp; BACK SOON &nbsp;•&nbsp; BACK SOON &nbsp;•&nbsp; BACK SOON &nbsp;•&nbsp; BACK SOON &nbsp;•&nbsp; BACK SOON &nbsp;•&nbsp; BACK SOON &nbsp;•&nbsp; BACK SOON &nbsp;•&nbsp; BACK SOON &nbsp;•&nbsp; BACK SOON &nbsp;•&nbsp; BACK SOON &nbsp;•&nbsp; BACK SOON &nbsp;•&nbsp;</i></span>
+          <span class="mp__cone mp__cone--1"></span><span class="mp__cone mp__cone--2"></span>
+          <span class="mp__hammer">🔨</span>
+          <span class="mp__num">02</span>
+          <span class="mp__sfx">BRB!</span>
+          <span class="mp__title">Mimu Trait Bingo</span>
+          <span class="mp__play"><b>Under construction</b><i>Back soon</i></span>
+        </div>
+        <div class="mp__panel mp__panel--e mp__panel--soon mp__panel--dead" aria-disabled="true" style="--c: var(--crimson)" data-sfx="SOON…">
+          <span class="mp__glyph">MD</span>
+          <span class="mp__num">03</span>
+          <span class="mp__sfx">SOON…</span>
+          <span class="mp__title">Mimu Derby</span>
+          <span class="mp__cap mp__cap--bottom">Full-tilt MIMU racing. Will your car make it?</span>
+          <span class="mp__play"><b>Locked</b><i>Coming soon</i></span>
+        </div>
+      </div>
+    </section>
+    </div><!-- /scene -->
+  </main>
+
+  <footer>
+    <div class="footer__inner">
+      <div class="footer__brand">MIMU SNIPER</div>
+      <div class="footer__links">
+        <a href="https://opensea.io/collection/mimuonape" target="_blank" rel="noopener">OpenSea</a>
+        <a href="https://x.com/mimuonape" target="_blank" rel="noopener">X</a>
+        <a href="https://www.mimuonape.xyz" target="_blank" rel="noopener">mimuonape.xyz</a>
+      </div>
+      <div class="footer__note">Official unofficial. Data only — no wallet connection.</div>
+    </div>
+  </footer>
+
+  <script src="js/ticker.js"></script>
+  <script src="js/parallax.js"></script>
+  <script src="js/manga.js"></script>
+  <script src="js/sticker-sfx.js"></script>
+  <script src="js/lofi.js"></script>
+  <script src="js/pop.js"></script>
+</body>
+</html>

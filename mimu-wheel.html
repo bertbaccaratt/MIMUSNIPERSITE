@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#101010">
+  <title>Mimu Wheel — MIMU Sniper</title>
+  <link rel="icon" href="assets/wheel-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Space+Grotesk:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/floatz.css">
+  <link rel="stylesheet" href="css/wheel.css">
+</head>
+<body class="floatz wheel-page">
+
+  <header class="topbar">
+    <a class="topbar__brand" href="index.html">MIMU<span>SNIPER</span></a>
+    <nav>
+      <a href="index.html#games">Games</a>
+      <a href="https://x.com/RadioMimu" target="_blank" rel="noopener">Radio</a>
+      <button class="lofi" id="lofiBtn" aria-pressed="false" title="Toggle theme music">
+        <span class="lofi__bars"><i></i><i></i><i></i><i></i></span>
+        <span id="lofiLabel">Music off</span>
+      </button>
+    </nav>
+  </header>
+
+  <div class="scene" id="scene">
+    <div class="hero__layer hero__banner" data-depth="0.08"><img src="assets/banner.webp" alt=""></div>
+    <div class="hero__layer hero__lines" data-depth="0.15"></div>
+    <div class="hero__layer hero__halftone" data-depth="0.30"></div>
+    <div class="hero__layer" data-depth="0.45">
+      <div class="splash splash--blue"></div><div class="splash splash--orange"></div><div class="splash splash--magenta"></div><div class="splash splash--crimson"></div>
+    </div>
+    <div class="hero__layer" data-depth="0.70">
+      <div class="debris debris--1"></div><div class="debris debris--2"></div><div class="debris debris--3"></div><div class="debris debris--4"></div>
+    </div>
+  <main class="fz">
+
+    <section class="hero hero--fz hero--wheel" id="hero" data-scroll="700"><div class="fz-hero" id="heroContent">
+      <img class="fz-logo fz-logo--wheel" src="assets/wheel-logo.png" alt="Mimu Wheel">
+      <div>
+        <h1 class="fz-title">Mimu Wheel</h1>
+        <p class="fz-tag">Spin it. Win it. — <em>One wheel, many fates</em></p>
+      </div>
+    </div></section>
+
+    <div class="wheel-top">
+      <div class="wheel-phase" id="wheel-phase"><span class="state-pill" id="wheel-state" data-state="idle">READY</span><span id="wheel-caption" class="wheel-caption">Waiting for the booth to load the wheel…</span></div>
+    </div>
+
+    <div class="wheel-layout">
+      <div class="wheel-stage" id="wheel-stage">
+        <div class="wheel-burst" id="wheel-burst"></div>
+        <canvas id="wheel-canvas" width="720" height="720"></canvas>
+        <div class="wheel-pointer" id="wheel-pointer"></div>
+        <div class="wheel-now" id="wheel-now"><span class="kicker">Under the pointer</span><b id="wheel-now-name">—</b></div>
+        <div id="countdown" class="countdown countdown--wheel hidden">
+          <div class="countdown__card"><p class="kicker">SPINNING IN</p><p class="countdown__num" id="countdown-num">3</p></div>
+        </div>
+      </div>
+
+      <aside class="wheel-side">
+        <div class="panel panel--wheel">
+          <p class="kicker">On the wheel <small id="wheel-count"></small></p>
+          <ul id="wheel-names" class="roster roster--wheel"></ul>
+        </div>
+        <div class="panel panel--wheel">
+          <p class="kicker">Past winners</p>
+          <ol id="wheel-history" class="history"></ol>
+        </div>
+        <button class="btn btn--booth" id="go-admin"><span>Admin</span></button>
+      </aside>
+    </div>
+
+    <!-- ===== ADMIN ===== -->
+    <section class="panel admin hidden" id="admin">
+      <div class="fz-head"><h2>Admin</h2><button class="btn btn--sm" id="admin-hide"><span>Hide</span></button></div>
+      <div class="admin-grid">
+        <div>
+          <p class="kicker">Add names <small>(one per line, or paste a list)</small></p>
+          <textarea id="admin-names" rows="6" placeholder="Bert&#10;Joubrel&#10;Floaty McFloat"></textarea>
+          <div class="booth-actions booth-actions--left"><button class="btn btn--join btn--sm" id="admin-add" type="button"><span>Add to wheel</span></button><button class="btn btn--sm btn--danger" id="admin-clear" type="button"><span>Clear wheel</span></button></div>
+          <p class="hint">Tap a name on the wheel list to remove it.</p>
+        </div>
+        <div>
+          <label class="field"><span>Spin length</span>
+            <select id="admin-duration">
+              <option value="60000">1 minute</option>
+              <option value="120000">2 minutes</option>
+              <option value="180000">3 minutes</option>
+              <option value="240000">4 minutes</option>
+              <option value="300000">5 minutes</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="admin-remove-winner" checked> Take the winner off the wheel after each spin</label>
+          <div class="booth-actions booth-actions--left">
+            <button class="btn btn--double" id="admin-spin" type="button"><span>Spin the wheel</span></button>
+            <button class="btn btn--sm btn--danger" id="admin-stop" type="button"><span>Reset spin</span></button>
+            <button class="btn btn--sm" id="admin-clear-history" type="button"><span>Clear winners</span></button>
+          </div>
+          <p class="hint" id="admin-hint"></p>
+        </div>
+      </div>
+    </section>
+
+
+    <p class="fz-credit">Art by Joubrel — Mechanics by Bert</p>
+  </main>
+  </div><!-- /scene -->
+
+  <div id="wheel-result" class="result hidden">
+    <div class="result__card result__card--wheel">
+      <img id="result-sprite" src="assets/wheel-logo.png" alt="">
+      <p class="kicker">THE WHEEL HAS SPOKEN</p>
+      <h3 id="result-name"></h3>
+      <p class="result__sub" id="result-sub"></p>
+      <div class="booth-actions"><button class="btn btn--join" id="result-close"><span>Back to the wheel</span></button></div>
+    </div>
+  </div>
+
+  <div id="gate" class="gate hidden">
+    <div class="gate__card panel">
+      <h3>Booth access</h3>
+      <input id="gate-pass" type="password" placeholder="Passphrase" autocomplete="off">
+      <p id="gate-err" class="hint err hidden">Nope.</p>
+      <div class="booth-actions"><button class="btn btn--booth" id="gate-go"><span>Enter</span></button><button class="btn btn--sm" id="gate-cancel"><span>Cancel</span></button></div>
+    </div>
+  </div>
+
+  <footer><div class="footer__inner"><div class="footer__brand">MIMU SNIPER</div><div class="footer__note">Official unofficial. Data only — no wallet connection.</div></div></footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/floatz/store.js"></script>
+  <script src="js/wheel/app.js"></script>
+  <script src="js/parallax.js"></script>
+  <script src="js/lofi.js"></script>
+  <script src="js/pop.js"></script>
+</body>
+</html>
