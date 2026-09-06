@@ -4,6 +4,8 @@
   const NOUN = window.FLOATZ_NOUN || "float", NOUNS = NOUN + "s", TITLE = window.FLOATZ_TITLE || "MIMU FLOAT RACE";
   const ADMIN_PASSWORD = "5555WENUMIM";          // change me
   const COUNTDOWN_MS = 30000, MAX_TICKETS = 3;
+  const REPLAY_SPAN_MS = 4000, REPLAY_SLOWMO = 1.6;   // replay the last 4s of the race at ~0.6x speed
+  let replay = null;
   const DEVICE = Store.deviceId();
   // Firebase drops empty arrays/objects — put the defaults back on every read
   const hashStr = str => { let h = 2166136261; for (const ch of String(str)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -33,6 +35,7 @@
     return {
       beep: () => tone(880, 0, 0.12), go: () => { tone(523, 0, 0.1); tone(659, 0.1, 0.1); tone(784, 0.2, 0.1); tone(1047, 0.3, 0.35, "square", 0.14); },
       horn: () => tone(220, 0, 0.6, "sawtooth", 0.08, 180),
+      replay: () => { [660, 880, 1320].forEach((f, i) => tone(f, i * 0.12, 0.25, "square", 0.08)); tone(90, 0, 1.2, "sawtooth", 0.05, 40); },
       win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.09, 0.5, i === 4 ? "triangle" : "square", 0.1)),
       lose: () => { tone(392, 0, 0.25, "triangle", 0.1); tone(330, 0.25, 0.4, "triangle", 0.1, 260); },
       resume: () => { if (ctx?.state === "suspended") ctx.resume(); },
@@ -116,7 +119,28 @@
   }
 
   // ---------- JOIN (players) ----------
+  let hypeCount = -1;
+  function renderHype() {
+    const l = lobby, open = l && l.state === "open";
+    document.querySelectorAll(".hype").forEach(box => {
+      box.classList.toggle("hidden", !open); if (!open) return;
+      const racers = l.racers, n = racers.length;
+      const nEl = box.querySelector(".hype__n"); nEl.textContent = n;
+      if (hypeCount !== -1 && n > hypeCount) { nEl.classList.remove("is-bump"); void nEl.offsetWidth; nEl.classList.add("is-bump"); }
+      box.querySelector(".hype__prize").textContent = `Prize: ${prizeTotal(l)}`;
+      box.querySelector(".hype__bar i").style.width = `${Math.min(100, n / l.maxRacers * 100)}%`;
+      box.querySelector(".hype__sfx").textContent = n >= l.maxRacers ? "LINE IS FULL!!" : n >= 2 ? "RACE STARTS SOON!" : `PICK YOUR ${NOUN.toUpperCase()}!`;
+      box.classList.toggle("is-big", n > 30);
+      const key = racers.map(r => r.id + r.spriteId).join("|");
+      if (box.dataset.key !== key) {
+        box.dataset.key = key;
+        box.querySelector(".hype__row").innerHTML = racers.map((r, i) => `<div class="hype__r ${r.deviceId === DEVICE ? "is-me" : ""}" style="--d:${-(i * 0.23 % 1.6).toFixed(2)}s"><img src="${E.spriteUrl(r.spriteId)}" alt=""><span>${esc(r.name)}</span></div>`).join("");
+      }
+    });
+    hypeCount = open ? l.racers.length : -1;
+  }
   function renderJoin() {
+    renderHype();
     const l = lobby, me = myRacer();
     const open = l && l.state === "open";
     $("join-status").textContent = !l || l.state === "closed" ? "Lobby closed — waiting for the booth to open the next race." :
@@ -163,6 +187,7 @@
 
   // ---------- BOOTH (admin) ----------
   function renderBooth() {
+    renderHype();
     const l = lobby;
     const state = l?.state || "closed";
     $("booth-state").textContent = state.toUpperCase();
@@ -263,7 +288,7 @@
   function enterRace(l) {
     show("race");
     if (!scene || joinedRaceId !== l.raceId || scene.racers.length !== l.racers.length) {
-      joinedRaceId = l.raceId; script = null; shownResultFor = null;
+      joinedRaceId = l.raceId; script = null; shownResultFor = null; replay = null;
       const roster = l.racers.map(r => ({ ...r, mine: r.deviceId === DEVICE }));
       scene = R.makeScene($("race-canvas"), roster, null, roster.length);
       $("race-result").classList.add("hidden");
@@ -278,9 +303,9 @@
     $("race-title").textContent = l.isDouble ? "DOUBLE OR NOTHIN" : TITLE;
     $("race-prize").textContent = `Prize: ${prizeTotal(l)} · ${l.racers.length} racers · ${Math.round(l.durationMs / 1000)}s`;
     renderVotes();
-    if (l.state === "finished" && shownResultFor !== l.raceId) showResult(l);
+    if (l.state === "finished" && shownResultFor !== l.raceId && !replay && scene?.over) showResult(l);
   }
-  function leaveRace() { cancelAnimationFrame(anim); scene = null; script = null; joinedRaceId = null; if (role === "admin") show("booth"); else show("join"); }
+  function leaveRace() { cancelAnimationFrame(anim); scene = null; script = null; joinedRaceId = null; replay = null; if (role === "admin") show("booth"); else show("join"); }
 
   function loop() {
     anim = requestAnimationFrame(loop);
@@ -298,8 +323,22 @@
     if (!script) { R.tick(scene, null); R.draw(scene, null); return; }
     const elapsed = now - l.startedAt, t = Math.min(1, elapsed / l.durationMs);
     if (elapsed >= l.durationMs) {
-      if (!scene.over) { R.snapToEnd(scene); R.confetti(scene, !!l.isDouble); if (role === "admin") { finishRace(); recordRace(l); } if (l.state === "finished" && shownResultFor !== l.raceId) showResult(l); }
-      R.tick(scene, 1); R.draw(scene, { timer: "00:00" }); return;
+      if (!scene.over && !replay) {   // race just ended: lock the result, then run the slow-mo replay of the final stretch
+        if (role === "admin") { finishRace(); recordRace(l); }
+        const span = Math.min(REPLAY_SPAN_MS, l.durationMs * 0.5);
+        replay = { raceId: l.raceId, from: 1 - span / l.durationMs, startedAt: performance.now(), len: span * REPLAY_SLOWMO };
+        scene.racers.forEach(r => { r.display = r.progress = E.sample(script.trajectories, r.i, replay.from); r.splashes = []; });
+        sfx.replay();
+      }
+      if (replay) {
+        const p = Math.min(1, (performance.now() - replay.startedAt) / replay.len);
+        const rt = replay.from + (1 - replay.from) * p;
+        if (p >= 1) { replay = null; R.snapToEnd(scene); R.confetti(scene, !!l.isDouble); if (l.state === "finished" && shownResultFor !== l.raceId) showResult(l); R.tick(scene, 1); R.draw(scene, { timer: "00:00" }); return; }
+        R.tick(scene, rt); R.draw(scene, { timer: "REPLAY", replay: p }); return;
+      }
+      R.tick(scene, 1); R.draw(scene, { timer: "00:00" });
+      if (l.state === "finished" && shownResultFor !== l.raceId) showResult(l);
+      return;
     }
     R.tick(scene, t);
     const rem = Math.max(0, Math.ceil((l.durationMs - elapsed) / 1000));
@@ -361,6 +400,6 @@
     Store.subscribe("lobby", onLobby);
     window.addEventListener("resize", () => { if (scene && lobby) { const roster = lobby.racers.map(r => ({ ...r, mine: r.deviceId === DEVICE })); const keep = scene.racers.map(r => r.display); scene = R.makeScene($("race-canvas"), roster, script, roster.length); scene.racers.forEach((r, i) => { r.display = r.progress = keep[i]; }); } });
   }
-  function leaveRaceQuiet() { cancelAnimationFrame(anim); scene = null; script = null; joinedRaceId = null; $("race-result").classList.add("hidden"); }
+  function leaveRaceQuiet() { cancelAnimationFrame(anim); scene = null; script = null; joinedRaceId = null; replay = null; $("race-result").classList.add("hidden"); }
   document.addEventListener("DOMContentLoaded", () => Store.preload(["lobby", "stats"]).then(init));
 })();

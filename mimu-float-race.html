@@ -82,6 +82,11 @@
     <!-- ===== JOIN (players) ===== -->
     <section class="view hidden" id="view-join">
       <div class="fz-head"><button class="btn btn--sm back-home"><span>← Back</span></button><h2>Join the race</h2><p id="join-status" class="fz-status"></p></div>
+      <div id="hype-join" class="hype hidden" aria-live="polite">
+        <div class="hype__top"><span class="hype__sfx">RACE STARTS SOON!</span><span class="hype__count"><b class="hype__n">0</b><i>/ 75 FLOATS claimed</i></span><span class="hype__prize"></span></div>
+        <div class="hype__bar"><i></i></div>
+        <div class="hype__row"></div>
+      </div>
 
       <div id="join-closed" class="panel panel--wait hidden">
         <img src="assets/floatz-logo.png" alt="">
@@ -112,6 +117,11 @@
     <!-- ===== BOOTH (admin) ===== -->
     <section class="view hidden" id="view-booth">
       <div class="fz-head"><button class="btn btn--sm back-home"><span>← Back</span></button><h2>Admin</h2><span class="state-pill" id="booth-state">CLOSED</span></div>
+      <div id="hype-booth" class="hype hidden" aria-live="polite">
+        <div class="hype__top"><span class="hype__sfx">RACE STARTS SOON!</span><span class="hype__count"><b class="hype__n">0</b><i>/ 75 FLOATS claimed</i></span><span class="hype__prize"></span></div>
+        <div class="hype__bar"><i></i></div>
+        <div class="hype__row"></div>
+      </div>
 
       <div class="booth-grid">
         <form class="panel" id="booth-form" onsubmit="return false">

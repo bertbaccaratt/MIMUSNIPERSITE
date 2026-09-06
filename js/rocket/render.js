@@ -197,7 +197,17 @@ window.RocketRender = (() => {
   function drawHUD(S, hud) {
     const { ctx, w } = S;
     if (hud.timer) { ctx.save(); ctx.font = "700 20px Bangers, Impact, sans-serif"; const tw = ctx.measureText(hud.timer).width + 26;
-      ctx.fillStyle = INK; ctx.fillRect(10, 10, tw, 32); ctx.fillStyle = "#ffd23f"; ctx.fillText(hud.timer, 22, 33); ctx.restore(); }
+      ctx.fillStyle = hud.replay != null ? "#c8102e" : INK; ctx.fillRect(10, 10, tw, 32); ctx.fillStyle = hud.replay != null ? "#fff" : "#ffd23f"; ctx.fillText(hud.timer, 22, 33); ctx.restore(); }
+    if (hud.replay != null) {   // slow-mo replay: letterbox bars, tint, big label, progress
+      const { h } = S; ctx.save();
+      ctx.fillStyle = "rgba(16,16,16,0.85)"; ctx.fillRect(0, 0, w, 26); ctx.fillRect(0, h - 26, w, 26);
+      ctx.fillStyle = "rgba(255,210,63,0.06)"; ctx.fillRect(0, 0, w, h);
+      const blink = Math.floor(performance.now() / 350) % 2 === 0;
+      ctx.font = "700 34px Bangers, Impact, sans-serif"; ctx.textAlign = "center"; ctx.lineWidth = 5; ctx.lineJoin = "round"; ctx.strokeStyle = INK; ctx.fillStyle = blink ? "#ffd23f" : "#fff";
+      ctx.strokeText("◀ SLOW-MO REPLAY ▶", w / 2, h - 40); ctx.fillText("◀ SLOW-MO REPLAY ▶", w / 2, h - 40);
+      ctx.fillStyle = "#c8102e"; ctx.fillRect(0, h - 4, w * hud.replay, 4);
+      ctx.restore();
+    }
     const standing = [...S.racers].sort((a, b) => b.progress - a.progress).slice(0, 5);
     const medal = ["1ST", "2ND", "3RD", "4TH", "5TH"];
     ctx.save(); ctx.font = "700 12px Bangers, Impact, sans-serif";
