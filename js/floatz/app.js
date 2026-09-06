@@ -6,7 +6,17 @@
   const COUNTDOWN_MS = 30000, MAX_TICKETS = 3;
   const DEVICE = Store.deviceId();
   // Firebase drops empty arrays/objects — put the defaults back on every read
-  Store.normalize("lobby", l => l ? { racers: [], tickets: {}, voters: {}, ...l, racers: Array.isArray(l.racers) ? l.racers : Object.values(l.racers || {}) } : null);
+  const hashStr = str => { let h = 2166136261; for (const ch of String(str)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+  const repairRacers = racers => {
+    const taken = new Set(racers.map(r => r.spriteId).filter(Boolean));
+    return racers.map(r => {
+      if (r.spriteId && E.SPRITES.includes(r.spriteId)) return r;
+      let i = hashStr(r.id || r.name) % E.SPRITES.length, tries = 0;
+      while (taken.has(E.SPRITES[i]) && tries++ < E.SPRITES.length) i = (i + 1) % E.SPRITES.length;
+      taken.add(E.SPRITES[i]); return { ...r, spriteId: E.SPRITES[i] };
+    });
+  };
+  Store.normalize("lobby", l => l ? { racers: [], tickets: {}, voters: {}, ...l, racers: repairRacers(Array.isArray(l.racers) ? l.racers : Object.values(l.racers || {})) } : null);
   Store.normalize("stats", s => s ? { recorded: [], ...s } : null);
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
@@ -137,14 +147,15 @@
   function join() {
     const name = $("join-name").value.trim().slice(0, 18);
     if (!name || !selectedSprite) return;
+    const sprite = selectedSprite, newId = "r" + Store.now().toString(36) + Math.random().toString(36).slice(2, 6), at = Store.now();
     let ok = false, reason = "";
     Store.update("lobby", l => {
       if (!l || l.state !== "open") { reason = "Lobby isn't open."; return l; }
       if (l.racers.some(r => r.deviceId === DEVICE)) { reason = `This device already has a ${NOUN}.`; return l; }
-      if (l.racers.some(r => r.spriteId === selectedSprite)) { reason = `Someone just grabbed that ${NOUN} — pick another.`; return l; }
+      if (l.racers.some(r => r.spriteId === sprite)) { reason = `Someone just grabbed that ${NOUN} — pick another.`; return l; }
       if (l.racers.length >= l.maxRacers) { reason = "Race is full."; return l; }
       if (l.racers.some(r => r.name.toLowerCase() === name.toLowerCase())) { reason = "That name's taken."; return l; }
-      ok = true; return { ...l, racers: [...l.racers, { id: "r" + Store.now().toString(36) + Math.random().toString(36).slice(2, 6), deviceId: DEVICE, name, spriteId: selectedSprite, joinedAt: Store.now() }] };
+      ok = true; return { ...l, racers: [...l.racers, { id: newId, deviceId: DEVICE, name, spriteId: sprite, joinedAt: at }] };
     });
     if (!ok) alert(reason); else sfx.go();
   }
@@ -185,10 +196,10 @@
   function openLobby() { Store.set("lobby", { ...defaultLobby(), ...readBoothForm(), state: "open" }); }
   function closeLobby() { Store.update("lobby", l => ({ ...l, state: "closed", racers: [] })); }
   function startCountdown() {
+    const now = Store.now(), raceId = "R" + now.toString(36), seed = E.Rng.newSeed(), form = readBoothForm();
     Store.update("lobby", l => {
       if (!l || l.racers.length < 2) return l;
-      const now = Store.now();
-      return { ...l, ...readBoothForm(), state: "countdown", raceId: "R" + now.toString(36), seed: E.Rng.newSeed(), countdownEndsAt: now + COUNTDOWN_MS, tickets: {}, voters: {}, isDouble: !!l.isDouble };
+      return { ...l, ...form, state: "countdown", raceId, seed, countdownEndsAt: now + COUNTDOWN_MS, tickets: {}, voters: {}, isDouble: !!l.isDouble };
     });
   }
   // called by the admin tab when the countdown hits zero: lock the draw and go
@@ -202,19 +213,21 @@
   }
   function finishRace() { Store.update("lobby", l => (l && l.state === "racing") ? { ...l, state: "finished" } : l); }
   function runBack(double) {
-    Store.update("lobby", l => ({ ...l, state: "countdown", raceId: "R" + Store.now().toString(36), seed: E.Rng.newSeed(), countdownEndsAt: Store.now() + COUNTDOWN_MS, tickets: {}, voters: {},
+    const now = Store.now(), raceId = "R" + now.toString(36), seed = E.Rng.newSeed();
+    Store.update("lobby", l => ({ ...l, state: "countdown", raceId, seed, countdownEndsAt: now + COUNTDOWN_MS, tickets: {}, voters: {},
       prize: double && l.prize.type !== "custom" ? { ...l.prize, stake: l.prize.stake * 2 } : l.prize, isDouble: !!double }));
   }
   function addManual() {
     const name = $("manual-name").value.trim().slice(0, 18); if (!name) return;
+    const manualId = "r" + Store.now().toString(36) + Math.random().toString(36).slice(2, 6), manualAt = Store.now();
     let msg = "";
     Store.update("lobby", l => {
       if (!l || l.state !== "open") { msg = "Open the lobby first."; return l; }
       if (l.racers.length >= l.maxRacers) { msg = "Race is full."; return l; }
       if (l.racers.some(r => r.name.toLowerCase() === name.toLowerCase())) { msg = "Name taken."; return l; }
       const free = E.SPRITES.filter(id => !l.racers.some(r => r.spriteId === id)); if (!free.length) { msg = `No ${NOUNS} left.`; return l; }
-      const spriteId = free[Math.floor(Math.random() * free.length)];
-      return { ...l, racers: [...l.racers, { id: "r" + Store.now().toString(36) + Math.random().toString(36).slice(2, 6), deviceId: "booth", name, spriteId, joinedAt: Store.now(), manual: true }] };
+      const spriteId = free[hashStr(manualId) % free.length];
+      return { ...l, racers: [...l.racers, { id: manualId, deviceId: "booth", name, spriteId, joinedAt: manualAt, manual: true }] };
     });
     if (msg) alert(msg); else $("manual-name").value = "";
   }
@@ -308,8 +321,22 @@
     else if (Object.keys(mine).length) line = NOUN === "float" ? "💨 Your pick didn't float hard enough." : "💥 Your pick never made orbit.";
     $("result-you").textContent = line;
     const bw = l.weights?.[l.winnerIndex]; $("result-odds").textContent = bw ? `Winner's draw weight: ${bw.toFixed(2)}× (${l.tickets[w.id] || 0} tickets). Seed ${l.seed.map(x => x.toString(16)).join("")}` : "";
+    renderPlacings(l);
     $("result-admin").classList.toggle("hidden", role !== "admin"); $("result-public").classList.toggle("hidden", role === "admin");
     if (me && me.id === w.id) sfx.win(); else if (mine[w.id]) sfx.win(); else sfx.lose();
+  }
+
+  function placings(l) {   // final order for every racer, from the deterministic race script
+    const sc = script || E.buildRace({ count: l.racers.length, winnerIndex: l.winnerIndex, durationMs: l.durationMs, seed: l.seed });
+    const last = sc.trajectories[0].length - 1;
+    return l.racers.map((r, i) => ({ ...r, i, final: i === l.winnerIndex ? 2 : sc.trajectories[i][last] }))
+      .sort((a, b) => b.final - a.final);
+  }
+  function renderPlacings(l) {
+    const box = $("result-ranks"); if (!box) return;
+    const order = placings(l), medal = ["🥇", "🥈", "🥉"];
+    box.innerHTML = order.map((r, i) => `<li class="${r.deviceId === DEVICE ? "is-me" : ""}"><span class="rk-pos">${medal[i] || (i + 1)}</span><img src="${E.spriteUrl(r.spriteId)}" alt=""><b>${esc(r.name)}</b>${r.deviceId === DEVICE ? "<i>you</i>" : ""}</li>`).join("");
+    $("result-ranks-head").textContent = `Final placings · ${order.length} ${NOUNS}`;
   }
 
   // ---------- wiring ----------
@@ -328,12 +355,12 @@
     $("booth-form").addEventListener("input", () => { $("booth-form").dataset.dirty = "1"; renderBooth(); });
     $("booth-form").addEventListener("change", applyBoothForm);
     $("manual-add").addEventListener("click", addManual); $("manual-name").addEventListener("keydown", e => e.key === "Enter" && addManual());
-    $("result-back-booth").addEventListener("click", () => show("booth"));
-    $("result-wait").addEventListener("click", () => show("join"));
+    $("result-back-booth").addEventListener("click", () => { $("race-result").classList.add("hidden"); show("booth"); });
+    $("result-wait").addEventListener("click", () => { $("race-result").classList.add("hidden"); show("join"); });
     document.addEventListener("pointerdown", () => { sfx.resume(); sfx.preload(); }, { once: true });
     Store.subscribe("lobby", onLobby);
     window.addEventListener("resize", () => { if (scene && lobby) { const roster = lobby.racers.map(r => ({ ...r, mine: r.deviceId === DEVICE })); const keep = scene.racers.map(r => r.display); scene = R.makeScene($("race-canvas"), roster, script, roster.length); scene.racers.forEach((r, i) => { r.display = r.progress = keep[i]; }); } });
   }
-  function leaveRaceQuiet() { cancelAnimationFrame(anim); scene = null; script = null; joinedRaceId = null; }
+  function leaveRaceQuiet() { cancelAnimationFrame(anim); scene = null; script = null; joinedRaceId = null; $("race-result").classList.add("hidden"); }
   document.addEventListener("DOMContentLoaded", () => Store.preload(["lobby", "stats"]).then(init));
 })();

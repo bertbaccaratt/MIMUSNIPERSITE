@@ -158,3 +158,17 @@ input:focus, select:focus { outline: 3px solid var(--blue); outline-offset: 2px;
 /* backend indicator (footer credit line) */
 html[data-backend="local"] .fz-credit::after { content: " — this device only: add Firebase config to sync every screen"; color: var(--crimson); }
 html[data-backend="live"] .fz-credit::after { content: " — live sync on"; color: var(--blue-deep); }
+
+/* final placings inside the result card */
+.result__card { max-height: calc(100svh - 32px); overflow-y: auto; }
+.result__ranks { text-align: left; margin: 6px 0 14px; }
+.result__ranks .kicker { text-align: center; margin: 0 0 6px; }
+.ranks { list-style: none; margin: 0; padding: 0; border: var(--border); background: var(--paper); max-height: 260px; overflow-y: auto; }
+.ranks li { display: grid; grid-template-columns: 34px 30px 1fr auto; align-items: center; gap: 8px; padding: 4px 8px; border-bottom: 2px solid #e3e1da; font-size: 14px; }
+.ranks li:last-child { border-bottom: 0; }
+.ranks li:nth-child(1) { background: #fff3b0; } .ranks li:nth-child(2) { background: #f0f0f0; } .ranks li:nth-child(3) { background: #ffe0c2; }
+.ranks li.is-me { outline: 2px solid var(--blue); outline-offset: -2px; }
+.ranks li img { width: 28px; height: 30px; object-fit: contain; image-rendering: pixelated; }
+.ranks li b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranks li i { font-family: var(--font-mono); font-size: 10px; color: var(--blue-deep); font-style: normal; }
+.rk-pos { font-family: var(--font-display); font-size: 18px; text-align: center; }
