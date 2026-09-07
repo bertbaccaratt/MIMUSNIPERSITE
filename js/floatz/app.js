@@ -391,6 +391,15 @@
   function init() {
     recordVisitor(); renderStats(); Store.subscribe("stats", renderStats);
     R.loadSprites(E.SPRITES);
+    // Watchdog: browsers pause requestAnimationFrame in hidden/background tabs, so the admin's race
+    // loop may never reach the countdown→racing→finished transitions. This timer keeps running anyway.
+    setInterval(() => {
+      const l = lobby; if (role !== "admin" || !l) return;
+      const now = Store.now();
+      if (l.state === "countdown" && now >= l.countdownEndsAt + 700) finalizeStart();
+      else if (l.state === "racing" && l.startedAt && now >= l.startedAt + l.durationMs + 1500) { finishRace(); recordRace(l); }
+    }, 1000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && scene) { cancelAnimationFrame(anim); anim = requestAnimationFrame(loop); } });
     { const d = $("duration-sec"); d.min = DUR.min; d.max = DUR.max; d.value = DUR.def; }
     $("go-join").addEventListener("click", () => { role = "player"; show("join"); onLobby(Store.get("lobby")); });
     $("go-booth").addEventListener("click", () => { $("gate").classList.remove("hidden"); $("gate-pass").focus(); });
