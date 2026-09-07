@@ -5,7 +5,7 @@
   const ADMIN_PASSWORD = "5555WENUMIM";          // change me
   const COUNTDOWN_MS = 30000, MAX_TICKETS = 3;
   const REPLAY_SPAN_MS = 4000, REPLAY_SLOWMO = 1.6;   // replay the last 4s of the race at ~0.6x speed
-  let replay = null;
+  let replay = null, leftRaceId = null;   // leftRaceId: the user backed out of this race's view — don't drag them back in
   const DEVICE = Store.deviceId();
   // Firebase drops empty arrays/objects — put the defaults back on every read
   const hashStr = str => { let h = 2166136261; for (const ch of String(str)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -115,7 +115,9 @@
     if (role === "admin") renderBooth();
     if (role === "player") renderJoin();
     // race views for both roles
-    if (l && (l.state === "countdown" || l.state === "racing" || l.state === "finished")) enterRace(l); else if (scene) leaveRace();
+    const live = l && (l.state === "countdown" || l.state === "racing");
+    const freshFinish = l && l.state === "finished" && (joinedRaceId === l.raceId || Store.now() - (l.startedAt + l.durationMs) < 120000);
+    if (live || freshFinish) { if (!(leftRaceId === l.raceId)) enterRace(l); } else if (scene) leaveRace();
   }
 
   // ---------- JOIN (players) ----------
@@ -286,7 +288,7 @@
 
   // ---------- RACE ----------
   function enterRace(l) {
-    show("race");
+    if (document.getElementById("view-race").classList.contains("hidden")) show("race");
     if (!scene || joinedRaceId !== l.raceId || scene.racers.length !== l.racers.length) {
       joinedRaceId = l.raceId; script = null; shownResultFor = null; replay = null;
       const roster = l.racers.map(r => ({ ...r, mine: r.deviceId === DEVICE }));
@@ -323,6 +325,7 @@
     if (!script) { R.tick(scene, null); R.draw(scene, null); return; }
     const elapsed = now - l.startedAt, t = Math.min(1, elapsed / l.durationMs);
     if (elapsed >= l.durationMs) {
+      if (!scene.over && !replay && elapsed > l.durationMs + 40000) { R.snapToEnd(scene); }   // late arrival: no replay, jump to the result
       if (!scene.over && !replay) {   // race just ended: lock the result, then run the slow-mo replay of the final stretch
         if (role === "admin") { finishRace(); recordRace(l); }
         const span = Math.min(REPLAY_SPAN_MS, l.durationMs * 0.5);
@@ -394,8 +397,8 @@
     $("booth-form").addEventListener("input", () => { $("booth-form").dataset.dirty = "1"; renderBooth(); });
     $("booth-form").addEventListener("change", applyBoothForm);
     $("manual-add").addEventListener("click", addManual); $("manual-name").addEventListener("keydown", e => e.key === "Enter" && addManual());
-    $("result-back-booth").addEventListener("click", () => { $("race-result").classList.add("hidden"); show("booth"); });
-    $("result-wait").addEventListener("click", () => { $("race-result").classList.add("hidden"); show("join"); });
+    $("result-back-booth").addEventListener("click", () => { $("race-result").classList.add("hidden"); leftRaceId = lobby?.raceId || null; leaveRaceQuiet(); show("booth"); renderBooth(); });
+    $("result-wait").addEventListener("click", () => { $("race-result").classList.add("hidden"); leftRaceId = lobby?.raceId || null; leaveRaceQuiet(); show("join"); renderJoin(); });
     document.addEventListener("pointerdown", () => { sfx.resume(); sfx.preload(); }, { once: true });
     Store.subscribe("lobby", onLobby);
     window.addEventListener("resize", () => { if (scene && lobby) { const roster = lobby.racers.map(r => ({ ...r, mine: r.deviceId === DEVICE })); const keep = scene.racers.map(r => r.display); scene = R.makeScene($("race-canvas"), roster, script, roster.length); scene.racers.forEach((r, i) => { r.display = r.progress = keep[i]; }); } });
