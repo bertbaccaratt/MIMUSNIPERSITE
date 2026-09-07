@@ -4,6 +4,7 @@
   const NOUN = window.FLOATZ_NOUN || "float", NOUNS = NOUN + "s", TITLE = window.FLOATZ_TITLE || "MIMU FLOAT RACE";
   const ADMIN_PASSWORD = "5555WENUMIM";          // change me
   const COUNTDOWN_MS = 30000, MAX_TICKETS = 3;
+  const DUR = Object.assign({ min: 10, max: 600, def: 60 }, window.FLOATZ_DURATION || {});   // race length limits (seconds)
   const REPLAY_SPAN_MS = 4000, REPLAY_SLOWMO = 1.6;   // replay the last 4s of the race at ~0.6x speed
   let replay = null, leftRaceId = null;   // leftRaceId: the user backed out of this race's view — don't drag them back in
   const DEVICE = Store.deviceId();
@@ -78,7 +79,7 @@
   let scene = null, script = null, anim = null, lastCountdownSec = -1, shownResultFor = null, joinedRaceId = null;
   let selectedSprite = null;
 
-  const defaultLobby = () => ({ id: "L" + Store.now().toString(36), state: "closed", maxRacers: E.MAX_RACERS, durationMs: 60000,
+  const defaultLobby = () => ({ id: "L" + Store.now().toString(36), state: "closed", maxRacers: E.MAX_RACERS, durationMs: DUR.def * 1000,
     prize: { type: "ape", stake: 500, label: "" }, racers: [], tickets: {}, voters: {}, createdAt: Store.now() });
 
   function prizeTotal(l) {
@@ -215,7 +216,7 @@
     const type = $("prize-type").value;
     return {
       maxRacers: E.MAX_RACERS,
-      durationMs: Math.max(10, Math.min(600, parseInt($("duration-sec").value, 10) || 60)) * 1000,
+      durationMs: Math.max(DUR.min, Math.min(DUR.max, parseInt($("duration-sec").value, 10) || DUR.def)) * 1000,
       prize: { type, stake: Math.max(1, parseInt($("prize-stake").value, 10) || 1), label: $("prize-label").value.trim().slice(0, 40) },
     };
   }
@@ -297,7 +298,7 @@
       cancelAnimationFrame(anim); anim = requestAnimationFrame(loop);
     }
     if ((l.state === "racing" || l.state === "finished") && !script && l.winnerIndex != null) {
-      script = E.buildRace({ count: l.racers.length, winnerIndex: l.winnerIndex, durationMs: l.durationMs, seed: l.seed });
+      script = buildScript(l);
       const roster = l.racers.map(r => ({ ...r, mine: r.deviceId === DEVICE }));
       scene = R.makeScene($("race-canvas"), roster, script, roster.length);
       if (l.state === "racing") sfx.horn();
@@ -330,7 +331,7 @@
         if (role === "admin") { finishRace(); recordRace(l); }
         const span = Math.min(REPLAY_SPAN_MS, l.durationMs * 0.5);
         replay = { raceId: l.raceId, from: 1 - span / l.durationMs, startedAt: performance.now(), len: span * REPLAY_SLOWMO };
-        scene.racers.forEach(r => { r.display = r.progress = E.sample(script.trajectories, r.i, replay.from); r.splashes = []; });
+        if (R.rewind) R.rewind(scene, replay.from); else scene.racers.forEach(r => { r.display = r.progress = E.sample(script.trajectories, r.i, replay.from); r.splashes = []; });
         sfx.replay();
       }
       if (replay) {
@@ -368,8 +369,13 @@
     if (me && me.id === w.id) sfx.win(); else if (mine[w.id]) sfx.win(); else sfx.lose();
   }
 
+  function buildScript(l) {
+    const params = { count: l.racers.length, winnerIndex: l.winnerIndex, durationMs: l.durationMs, seed: l.seed, weights: l.weights || null };
+    return R.buildScript ? R.buildScript(params) : E.buildRace(params);
+  }
   function placings(l) {   // final order for every racer, from the deterministic race script
-    const sc = script || E.buildRace({ count: l.racers.length, winnerIndex: l.winnerIndex, durationMs: l.durationMs, seed: l.seed });
+    const sc = script || buildScript(l);
+    if (R.placings) return R.placings(l, sc).map(i => ({ ...l.racers[i], i }));
     const last = sc.trajectories[0].length - 1;
     return l.racers.map((r, i) => ({ ...r, i, final: i === l.winnerIndex ? 2 : sc.trajectories[i][last] }))
       .sort((a, b) => b.final - a.final);
@@ -385,6 +391,7 @@
   function init() {
     recordVisitor(); renderStats(); Store.subscribe("stats", renderStats);
     R.loadSprites(E.SPRITES);
+    { const d = $("duration-sec"); d.min = DUR.min; d.max = DUR.max; d.value = DUR.def; }
     $("go-join").addEventListener("click", () => { role = "player"; show("join"); onLobby(Store.get("lobby")); });
     $("go-booth").addEventListener("click", () => { $("gate").classList.remove("hidden"); $("gate-pass").focus(); });
     $("gate-cancel").addEventListener("click", () => $("gate").classList.add("hidden"));
