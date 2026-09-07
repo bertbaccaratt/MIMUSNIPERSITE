@@ -7,21 +7,25 @@ window.SnailRender = (() => {
   const loadSprites = ids => K.loadSprites(ids, images).then(() => { ready = true; });
 
   function buildScript(p) {
+    // Snails only ever move forward. The float engine gives us the (ticket-weighted) finishing order;
+    // each snail then gets its own crawl / burst / nap timeline that lands it on that finishing spot.
     const base = E().buildRace({ ...p, start: 0.04, touch: 0.985 });
     const rng = K.rngFor(p.seed, 0x5a11);
-    const steps = base.trajectories[0].length - 1;
-    const warped = base.trajectories.map((traj, i) => {
-      // segments of nap / crawl / burst; slopes normalised so warp(1) = 1
+    const steps = base.trajectories[0].length - 1, last = steps, start = 0.04, touch = 0.985;
+    const order = base.trajectories.map((tr, i) => ({ i, v: i === p.winnerIndex ? 9 : tr[last] })).sort((a, b) => b.v - a.v).map(o => o.i);
+    const finals = []; order.forEach((i, rank) => { finals[i] = rank === 0 ? touch : touch - (0.045 + rank * 0.012 + rng.next() * 0.01); });
+    const warped = base.trajectories.map((_, i) => {
       const segs = []; let total = 0; const count = 18 + Math.floor(rng.next() * 12);
       for (let k = 0; k < count; k++) { const r = rng.next(); const kind = r < 0.42 ? "nap" : r < 0.88 ? "crawl" : "burst"; const len = 0.5 + rng.next() * 1.2; const slope = kind === "nap" ? 0.0 : kind === "crawl" ? 0.55 : 1.9; segs.push({ len, slope, kind }); total += len; }
-      const gain = segs.reduce((a, s) => a + s.len * s.slope, 0);
-      const warp = u => { let acc = 0, x = u * total; for (const s of segs) { if (x <= s.len) return acc / gain + (x * s.slope) / gain; x -= s.len; acc += s.len * s.slope; } return 1; };
-      // keep the last 5% of time unwarped so the pinned photo finish still lands exactly
-      return Array.from({ length: steps + 1 }, (_, s) => { const u = s / steps; const uu = u < 0.95 ? warp(u / 0.95) * 0.95 : u; return E().sample(base.trajectories, i, uu); });
+      segs[segs.length - 1].slope = 0.55;                          // always crawling at the line, never napping there
+      const gain = segs.reduce((a, q) => a + q.len * q.slope, 0);
+      const warp = u => { let acc = 0, x = u * total; for (const q of segs) { if (x <= q.len) return (acc + x * q.slope) / gain; x -= q.len; acc += q.len * q.slope; } return 1; };
+      return Array.from({ length: steps + 1 }, (_, s) => start + (finals[i] - start) * warp(s / steps));
     });
     const naps = warped.map(t => t.map((v, s) => s > 0 && Math.abs(v - t[s - 1]) < 1e-5));
-    return { ...base, trajectories: warped, naps, steps };
+    return { ...base, trajectories: warped, naps, steps, order };
   }
+  const placings = (l, sc) => sc.order;
 
   function layout(w, laneCount) {
     const padX = w * 0.06, spriteW = Math.max(26, Math.min(laneCount <= 6 ? 96 : laneCount <= 12 ? 74 : 56, (w * 0.7) / 9));
@@ -95,5 +99,5 @@ window.SnailRender = (() => {
     K.drawConfetti(S);
     K.hud(S, hudInfo, ranked);
   }
-  return { loadSprites, images, makeScene, tick, draw, snapToEnd, confetti, buildScript, rewind, get ready() { return ready; } };
+  return { loadSprites, images, makeScene, tick, draw, snapToEnd, confetti, buildScript, placings, rewind, get ready() { return ready; } };
 })();
