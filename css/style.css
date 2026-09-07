@@ -434,6 +434,7 @@ footer {
 .mp__title { position: absolute; left: 14px; bottom: 14px; z-index: 3; font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 44px); letter-spacing: 0.04em; text-transform: uppercase; line-height: 0.95; color: var(--ink);
   background: var(--paper); border: var(--border); box-shadow: 5px 5px 0 var(--c); padding: 6px 14px; transform: skewX(-6deg); max-width: 70%; }
 .mp__panel--e .mp__cap { max-width: 44%; }
+.mp__panel--g .mp__title { font-size: clamp(20px, 2.3vw, 30px); max-width: 60%; }
 .mp__play { position: absolute; right: 14px; bottom: 14px; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--font-display); }
 .mp__play b { font-size: 22px; letter-spacing: 0.1em; background: var(--ink); color: var(--paper); padding: 8px 18px; border: var(--border); box-shadow: 3px 3px 0 var(--c); transition: transform 0.12s, background 0.12s, color 0.12s; }
 .mp__play i { font: 10px var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--paper); background: var(--ink); padding: 2px 6px; }
