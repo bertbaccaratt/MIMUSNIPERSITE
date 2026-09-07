@@ -92,10 +92,10 @@ window.GameKit = (() => {
     const ctx = canvas.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     return { ctx, w, h };
   }
-  function drawSprite(ctx, img, x, y, wid, { angle = 0, gray = false, alpha = 1, flip = false } = {}) {
+  function drawSprite(ctx, img, x, y, wid, { angle = 0, gray = false, alpha = 1, flip = false, smooth = false } = {}) {
     if (!img) return; const hgt = img.naturalHeight * (wid / img.naturalWidth);
     ctx.save(); ctx.translate(x, y); if (angle) ctx.rotate(angle); if (flip) ctx.scale(-1, 1); ctx.globalAlpha = alpha; if (gray) ctx.filter = "grayscale(1) brightness(0.7)";
-    ctx.imageSmoothingEnabled = false; ctx.drawImage(img, -wid / 2, -hgt / 2, wid, hgt); ctx.restore();
+    ctx.imageSmoothingEnabled = smooth; if (smooth) ctx.imageSmoothingQuality = "high"; ctx.drawImage(img, -wid / 2, -hgt / 2, wid, hgt); ctx.restore();
   }
 
   /* ---------- tiny synth for renderer-side sounds ---------- */

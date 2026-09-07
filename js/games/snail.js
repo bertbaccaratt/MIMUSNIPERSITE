@@ -12,8 +12,8 @@ window.SnailRender = (() => {
     const steps = base.trajectories[0].length - 1;
     const warped = base.trajectories.map((traj, i) => {
       // segments of nap / crawl / burst; slopes normalised so warp(1) = 1
-      const segs = []; let total = 0; const count = 14 + Math.floor(rng.next() * 10);
-      for (let k = 0; k < count; k++) { const r = rng.next(); const kind = r < 0.3 ? "nap" : r < 0.8 ? "crawl" : "burst"; const len = 0.4 + rng.next(); const slope = kind === "nap" ? 0.02 : kind === "crawl" ? 0.7 : 3.2; segs.push({ len, slope, kind }); total += len; }
+      const segs = []; let total = 0; const count = 18 + Math.floor(rng.next() * 12);
+      for (let k = 0; k < count; k++) { const r = rng.next(); const kind = r < 0.42 ? "nap" : r < 0.88 ? "crawl" : "burst"; const len = 0.5 + rng.next() * 1.2; const slope = kind === "nap" ? 0.0 : kind === "crawl" ? 0.55 : 1.9; segs.push({ len, slope, kind }); total += len; }
       const gain = segs.reduce((a, s) => a + s.len * s.slope, 0);
       const warp = u => { let acc = 0, x = u * total; for (const s of segs) { if (x <= s.len) return acc / gain + (x * s.slope) / gain; x -= s.len; acc += s.len * s.slope; } return 1; };
       // keep the last 5% of time unwarped so the pinned photo finish still lands exactly
@@ -46,7 +46,7 @@ window.SnailRender = (() => {
       const target = E().sample(S.script.trajectories, r.i, tRace);
       const diff = target - r.display; r.display += diff * (1 - Math.exp(-dt * 10)); r.progress = r.display;
       const sp = E().speed(S.script.trajectories, r.i, tRace); r.speedV = sp; r.napping = Math.abs(sp) < 0.01 && !S.over;
-      r.bob += dt * (1.5 + Math.abs(sp) * 2);
+      r.bob += dt * (1.2 + Math.abs(sp) * 3);
       if (!r.napping && Math.random() < 0.3) r.trail.push({ x: S.startX + r.display * S.trackLen, life: 1 });
       r.trail.forEach(t => { t.life -= dt * 0.08; }); r.trail = r.trail.filter(t => t.life > 0).slice(-120);
       if (r.napping && Math.random() < 0.02) r.zz = 1; if (r.zz > 0) r.zz -= dt * 0.6;
@@ -79,7 +79,8 @@ window.SnailRender = (() => {
     // snails
     [...S.racers].sort((a, b) => a.laneY - b.laneY).forEach(r => {
       const x = S.startX + r.display * S.trackLen, img = images[r.spriteId]; const squash = r.napping ? 0 : Math.sin(r.bob) * 2;
-      K.drawSprite(ctx, img, x, r.laneY + squash, S.spriteW);
+      const stretch = r.napping ? 1 : 1 + Math.sin(r.bob * 2) * 0.05;
+      ctx.save(); ctx.translate(x, r.laneY + squash); ctx.scale(stretch, 1 / stretch); K.drawSprite(ctx, img, 0, 0, S.spriteW); ctx.restore();
       if (r.zz > 0) { ctx.save(); ctx.globalAlpha = Math.min(1, r.zz); ctx.font = "700 16px Bangers, Impact, sans-serif"; ctx.fillStyle = "#fff"; ctx.strokeStyle = INK; ctx.lineWidth = 3; const zx = x + S.spriteW * 0.3, zy = r.laneY - S.spriteW * 0.5 - (1 - r.zz) * 20; ctx.strokeText("z z", zx, zy); ctx.fillText("z z", zx, zy); ctx.restore(); }
       if (r.speedV > 0.05 && !S.over) { ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(x - S.spriteW * 0.45 - i * 6, r.laneY - 6 + i * 6); ctx.lineTo(x - S.spriteW * 0.7 - i * 8, r.laneY - 6 + i * 6); ctx.stroke(); } }
       if (!S.over && r.display > 0.86) { K.sfxText(ctx, x, r.laneY - S.spriteW * 0.6, "SO CLOSE", { size: 14, color: "#fff" }); }

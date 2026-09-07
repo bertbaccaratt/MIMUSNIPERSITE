@@ -1,4 +1,4 @@
-/* MIMU Hot Potato — MIMUs sit in a ring; a cursed MIMU egg hops between them, faster and faster
+/* NOT MY EGG — MIMUs chill in recliners around a messy living room; a cursed MIMU egg hops between them, faster and faster
    as it cracks, and hatches on whoever is holding it. One hatch per round until one MIMU is left.
    Tickets make a MIMU pass the egg faster (shorter holds). Script = hop list + hatch times, from the seed. */
 window.PotatoRender = (() => {
@@ -36,12 +36,24 @@ window.PotatoRender = (() => {
   }
   const placings = (l, sc) => K.elimPlacings(l, sc);
 
+  const CHAIRS = [["#7a4a2e", "#a06a44"], ["#3f6b3a", "#5b8f55"], ["#6b2d3a", "#96404f"], ["#3a4b7a", "#5468a6"], ["#5a4632", "#7d6448"], ["#4a3a6b", "#6a558f"]];
   function makeScene(canvas, roster, script, laneCount) {
     const { ctx, w, h } = K.fitCanvas(canvas, 0.66, 440, 720);
     const n = roster.length, cx = w / 2, cy = h / 2 + 14, rx = w * 0.40, ry = h * 0.36;
     const spriteW = n <= 8 ? 78 : n <= 16 ? 64 : n <= 30 ? 50 : n <= 50 ? 40 : 32;
-    const racers = roster.map((r, i) => { const a = (i / n) * Math.PI * 2 - Math.PI / 2; return { ...r, i, a, x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry, out: false, holding: false, progress: 0, jiggle: 0 }; });
-    return { ctx, w, h, cx, cy, rx, ry, spriteW, racers, script, laneCount, t: 0, over: false, time: 0, last: performance.now(), egg: { x: cx, y: cy, from: null, to: null, t0: 0, crack: 0 }, hopIdx: -1, flash: null, shake: 0 };
+    const racers = roster.map((r, i) => { const a = (i / n) * Math.PI * 2 - Math.PI / 2; return { ...r, i, a, x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry, out: false, holding: false, progress: 0, jiggle: 0, chair: CHAIRS[i % CHAIRS.length] }; });
+    // deterministic mess so every screen shows the same living room
+    let seed = 1234 + n * 7; const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+    const mess = []; const kinds = ["pizza", "can", "can", "sock", "chips", "paper", "slice", "remote", "can", "bowl", "sock", "paper"];
+    for (let k = 0; k < Math.min(26, 10 + n); k++) {
+      for (let tries = 0; tries < 20; tries++) {
+        const x = 30 + rnd() * (w - 60), y = h * 0.28 + rnd() * (h * 0.7);
+        const nearChair = racers.some(r => Math.abs(r.x - x) < spriteW * 0.95 && Math.abs(r.y - y) < spriteW * 1.05);
+        const nearTable = Math.abs(x - cx) < rx * 0.5 + 30 && Math.abs(y - cy) < ry * 0.5 + 24;
+        if (!nearChair && !nearTable) { mess.push({ kind: kinds[k % kinds.length], x, y, rot: (rnd() - 0.5) * 1.2, v: rnd() }); break; }
+      }
+    }
+    return { ctx, w, h, cx, cy, rx, ry, spriteW, racers, mess, script, laneCount, t: 0, over: false, time: 0, last: performance.now(), egg: { x: cx, y: cy, from: null, to: null, t0: 0, crack: 0 }, hopIdx: -1, flash: null, shake: 0 };
   }
   function stateAt(sc, t) {   // current hop index, round progress (0..1 = cracking), holder
     let idx = 0; while (idx + 1 < sc.hops.length && sc.hops[idx + 1].t <= t) idx++;
@@ -89,6 +101,75 @@ window.PotatoRender = (() => {
   function snapToEnd(S) { apply(S, 1); S.over = true; S.egg.from = null; const win = S.racers[S.script.winnerIndex]; if (win) { S.egg.x = win.x; S.egg.y = win.y; } }
   const confetti = (S, epic) => K.confetti(S, epic);
 
+
+  function drawRecliner(ctx, x, y, sw, [c1, c2], out) {
+    const cw = sw * 1.45, back = sw * 1.1, seatH = sw * 0.55, arm = sw * 0.22;
+    ctx.save(); if (out) ctx.globalAlpha = 0.6; ctx.lineWidth = 3; ctx.strokeStyle = INK;
+    // shadow
+    ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(x + 4, y + sw * 0.62, cw * 0.62, sw * 0.28, 0, 0, 6.29); ctx.fill();
+    // backrest (tall, tufted)
+    ctx.fillStyle = c1; rrect(ctx, x - cw / 2 + arm * 0.5, y - back * 0.85, cw - arm, back, sw * 0.18); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = c2; rrect(ctx, x - cw / 2 + arm * 0.5 + 6, y - back * 0.85 + 6, cw - arm - 12, back * 0.55, sw * 0.14); ctx.fill();
+    ctx.fillStyle = "rgba(0,0,0,0.18)"; [-0.22, 0.22].forEach(k => { ctx.beginPath(); ctx.arc(x + cw * k, y - back * 0.5, 3, 0, 6.29); ctx.fill(); });
+    // seat cushion
+    ctx.fillStyle = c2; rrect(ctx, x - cw / 2 + arm * 0.6, y + sw * 0.05, cw - arm * 1.2, seatH * 0.8, 8); ctx.fill(); ctx.stroke();
+    // armrests
+    ctx.fillStyle = c1; rrect(ctx, x - cw / 2, y - sw * 0.25, arm, seatH * 1.2, 7); ctx.fill(); ctx.stroke(); rrect(ctx, x + cw / 2 - arm, y - sw * 0.25, arm, seatH * 1.2, 7); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  function drawFootrest(ctx, x, y, sw, [c1, c2], out) {
+    const cw = sw * 1.45, arm = sw * 0.22;
+    ctx.save(); if (out) ctx.globalAlpha = 0.6; ctx.lineWidth = 3; ctx.strokeStyle = INK;
+    ctx.fillStyle = c1; rrect(ctx, x - cw / 2 + arm * 0.9, y + sw * 0.36, cw - arm * 1.8, sw * 0.3, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = c2; rrect(ctx, x - cw / 2 + arm * 0.9 + 5, y + sw * 0.36 + 4, cw - arm * 1.8 - 10, sw * 0.14, 5); ctx.fill();
+    ctx.restore();
+  }
+  function rrect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r); ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath(); }
+  function drawMess(ctx, m, t) {
+    ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(m.rot); ctx.lineWidth = 2.5; ctx.strokeStyle = INK;
+    switch (m.kind) {
+      case "pizza": ctx.fillStyle = "#d9a466"; rrect(ctx, -30, -22, 60, 44, 4); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#c48a4a"; rrect(ctx, -30, -22, 60, 8, 3); ctx.fill();
+        ctx.fillStyle = "#ffb347"; ctx.beginPath(); ctx.arc(0, 4, 17, 0, 6.29); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#c8102e"; [[-6, 0], [6, 2], [0, 10], [-3, -8]].forEach(([a, b]) => { ctx.beginPath(); ctx.arc(a, b + 2, 3, 0, 6.29); ctx.fill(); });
+        ctx.fillStyle = "#d9a466"; ctx.beginPath(); ctx.moveTo(0, 4); ctx.lineTo(17, 4); ctx.arc(0, 4, 17, 0, 1.1); ctx.closePath(); ctx.fill(); ctx.stroke(); break;
+      case "slice": ctx.fillStyle = "#ffb347"; ctx.beginPath(); ctx.moveTo(-14, -10); ctx.lineTo(14, -10); ctx.lineTo(0, 16); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#d9a466"; ctx.fillRect(-14, -13, 28, 5); ctx.strokeRect(-14, -13, 28, 5); ctx.fillStyle = "#c8102e"; ctx.beginPath(); ctx.arc(-4, -4, 2.5, 0, 6.29); ctx.arc(5, -2, 2.5, 0, 6.29); ctx.fill(); break;
+      case "can": ctx.fillStyle = m.v < 0.5 ? "#c8102e" : "#2fa8ff"; rrect(ctx, -7, -12, 14, 24, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#d8d8d8"; ctx.fillRect(-7, -12, 14, 4); ctx.fillRect(-7, 8, 14, 4); ctx.fillStyle = "#fff"; ctx.fillRect(-3, -4, 6, 8); break;
+      case "sock": ctx.fillStyle = m.v < 0.5 ? "#eaeaea" : "#ffd23f"; ctx.beginPath(); ctx.moveTo(-6, -16); ctx.lineTo(6, -16); ctx.lineTo(6, 4); ctx.quadraticCurveTo(18, 6, 16, 14); ctx.quadraticCurveTo(2, 18, -6, 8); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#c8102e"; ctx.fillRect(-6, -16, 12, 4); break;
+      case "chips": ctx.fillStyle = "#ffd23f"; ctx.beginPath(); ctx.moveTo(-14, -20); ctx.lineTo(14, -20); ctx.lineTo(12, 20); ctx.lineTo(-12, 20); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#c8102e"; ctx.beginPath(); ctx.ellipse(0, 0, 9, 12, 0, 0, 6.29); ctx.fill(); ctx.fillStyle = "#fff"; ctx.font = "700 9px Poppins, sans-serif"; ctx.textAlign = "center"; ctx.fillText("MIMU", 0, 3); break;
+      case "paper": ctx.fillStyle = "#f4f2ec"; ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283, r = 9 + (i % 2) * 4; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.stroke(); break;
+      case "remote": ctx.fillStyle = "#333"; rrect(ctx, -6, -18, 12, 36, 3); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#c8102e"; ctx.beginPath(); ctx.arc(0, -12, 2.5, 0, 6.29); ctx.fill(); ctx.fillStyle = "#aaa"; for (let i = 0; i < 4; i++) ctx.fillRect(-3, -4 + i * 5, 6, 2.5); break;
+      case "bowl": ctx.fillStyle = "#2fa8ff"; ctx.beginPath(); ctx.ellipse(0, 0, 22, 12, 0, 0, 6.29); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#fff8dc"; for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.arc(-14 + i * 3.5, -4 + ((i * 7) % 5) - 2, 3.5, 0, 6.29); ctx.fill(); } break;
+    }
+    ctx.restore();
+  }
+  function drawRoom(S) {
+    const { ctx, w, h, cx, cy, rx, ry } = S;
+    // wall + baseboard, then a shaggy rug on a wood floor
+    ctx.fillStyle = "#f0d9a6"; ctx.fillRect(-20, -20, w + 40, h * 0.3 + 20);
+    ctx.fillStyle = "rgba(0,0,0,0.06)"; for (let x = 0; x < w; x += 28) ctx.fillRect(x, -20, 10, h * 0.3 + 20);
+    ctx.fillStyle = "#a9743f"; ctx.fillRect(-20, h * 0.3, w + 40, h); ctx.fillStyle = "rgba(0,0,0,0.12)"; for (let y = h * 0.3; y < h; y += 26) ctx.fillRect(-20, y, w + 40, 2);
+    ctx.fillStyle = "#f7efe1"; ctx.fillRect(-20, h * 0.3 - 10, w + 40, 10); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.strokeRect(-20, h * 0.3 - 10, w + 40, 10);
+    // window + poster + TV on the wall
+    ctx.fillStyle = "#8fd3ff"; rrect(ctx, w * 0.62, 18, w * 0.2, h * 0.19, 4); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(w * 0.72, 18); ctx.lineTo(w * 0.72, 18 + h * 0.19); ctx.moveTo(w * 0.62, 18 + h * 0.095); ctx.lineTo(w * 0.82, 18 + h * 0.095); ctx.stroke();
+    ctx.fillStyle = "#1a1a24"; ctx.beginPath(); ctx.arc(w * 0.66, 18 + h * 0.06, 6, 0, 6.29); ctx.fill();   // moon
+    ctx.fillStyle = "#e83cc8"; rrect(ctx, w * 0.16, 22, w * 0.13, h * 0.17, 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#fff"; ctx.font = "700 11px Poppins, sans-serif"; ctx.textAlign = "center"; ctx.fillText("WITNESS", w * 0.225, 30 + h * 0.07); ctx.fillText("THEM", w * 0.225, 44 + h * 0.07);
+    ctx.fillStyle = "#222"; rrect(ctx, w * 0.36, 26, w * 0.24, h * 0.17, 6); ctx.fill(); ctx.stroke();
+    const tv = Math.sin(S.time * 8) * 0.5 + 0.5; ctx.fillStyle = `rgb(${40 + tv * 30},${80 + tv * 60},${140 + tv * 60})`; ctx.fillRect(w * 0.37, 32, w * 0.22, h * 0.17 - 12);
+    ctx.fillStyle = "rgba(255,255,255,0.25)"; for (let i = 0; i < 6; i++) ctx.fillRect(w * 0.37, 32 + ((S.time * 40 + i * 17) % (h * 0.17 - 12)), w * 0.22, 2);
+    ctx.fillStyle = "#444"; ctx.fillRect(w * 0.46, 26 + h * 0.17, w * 0.04, 8);
+    // rug
+    ctx.fillStyle = "#6b3fb5"; ctx.beginPath(); ctx.ellipse(cx, cy + 10, rx * 1.28, ry * 1.34, 0, 0, 6.29); ctx.fill(); ctx.lineWidth = 4; ctx.stroke();
+    ctx.strokeStyle = "#e83cc8"; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.ellipse(cx, cy + 10, rx * 1.15, ry * 1.2, 0, 0, 6.29); ctx.stroke(); ctx.setLineDash([]); ctx.strokeStyle = INK;
+    K.halftone(S, 0.08, 1.2, 9);
+    // coffee table with the mess of the century
+    ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.beginPath(); ctx.ellipse(cx + 4, cy + 10, rx * 0.5, ry * 0.42, 0, 0, 6.29); ctx.fill();
+    ctx.fillStyle = "#c9925a"; ctx.beginPath(); ctx.ellipse(cx, cy, rx * 0.5, ry * 0.4, 0, 0, 6.29); ctx.fill(); ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = "#a9743f"; ctx.beginPath(); ctx.ellipse(cx, cy, rx * 0.42, ry * 0.32, 0, 0, 6.29); ctx.fill();
+    drawMess(ctx, { kind: "pizza", x: cx - rx * 0.22, y: cy - 4, rot: -0.2, v: 0.2 }, 0); drawMess(ctx, { kind: "can", x: cx + rx * 0.18, y: cy - 12, rot: 0.3, v: 0.3 }, 0);
+    drawMess(ctx, { kind: "can", x: cx + rx * 0.3, y: cy + 8, rot: -1.2, v: 0.7 }, 0); drawMess(ctx, { kind: "remote", x: cx + rx * 0.05, y: cy + 14, rot: 0.9, v: 0 }, 0); drawMess(ctx, { kind: "slice", x: cx - rx * 0.02, y: cy - 16, rot: 2.4, v: 0 }, 0);
+    S.mess.forEach(m => drawMess(ctx, m, S.time));
+    // when the egg's about to blow the lights flicker red
+    if (S.crack > 0.6) { ctx.fillStyle = `rgba(232,60,60,${(S.crack - 0.6) * 0.35 * (0.6 + 0.4 * Math.sin(S.time * 12))})`; ctx.fillRect(-20, -20, w + 40, h + 40); }
+  }
   function drawEgg(ctx, x, y, size, crack, hatched) {
     ctx.save(); ctx.translate(x, y); if (crack > 0.5) ctx.rotate(Math.sin(performance.now() / 40) * 0.12 * (crack - 0.5) * 2);
     ctx.beginPath(); ctx.ellipse(0, 0, size * 0.42, size * 0.55, 0, 0, 6.29); ctx.fillStyle = "#3c1e5a"; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
@@ -103,24 +184,17 @@ window.PotatoRender = (() => {
   function draw(S, hudInfo) {
     const { ctx, w, h, cx, cy, rx, ry } = S; ctx.clearRect(0, 0, w, h);
     ctx.save(); if (S.shake > 0) ctx.translate((Math.random() - 0.5) * 10 * S.shake, (Math.random() - 0.5) * 10 * S.shake);
-    // campfire circle: orange ground, speed lines when it's getting hot
-    ctx.fillStyle = "#ff8a1f"; ctx.fillRect(-20, -20, w + 40, h + 40);
-    if (S.crack > 0.5) { ctx.save(); ctx.strokeStyle = `rgba(255,255,255,${(S.crack - 0.5) * 0.5})`; ctx.lineWidth = 2; for (let i = 0; i < 60; i++) { const a = i / 60 * 6.283 + S.time * 0.3; ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * rx * 1.15, cy + Math.sin(a) * ry * 1.15); ctx.lineTo(cx + Math.cos(a) * w, cy + Math.sin(a) * w); ctx.stroke(); } ctx.restore(); }
-    K.halftone(S, 0.1, 1.2, 8);
-    ctx.beginPath(); ctx.ellipse(cx, cy, rx * 1.16, ry * 1.22, 0, 0, 6.29); ctx.fillStyle = "#ffb15c"; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(cx, cy, rx * 0.5, ry * 0.5, 0, 0, 6.29); ctx.fillStyle = "#c95d2a"; ctx.fill(); ctx.stroke();
-    // fire in the middle
-    for (let i = 0; i < 5; i++) { const fl = Math.sin(S.time * 9 + i * 2) * 6; ctx.fillStyle = i % 2 ? "#ffd23f" : "#ff4a1f"; ctx.beginPath(); ctx.moveTo(cx - 22 + i * 11, cy + 14); ctx.lineTo(cx - 16 + i * 11, cy - 20 - fl - (i === 2 ? 14 : 0)); ctx.lineTo(cx - 10 + i * 11, cy + 14); ctx.fill(); }
-    ctx.fillStyle = "#5a3a1a"; ctx.fillRect(cx - 26, cy + 12, 52, 7); ctx.strokeRect(cx - 26, cy + 12, 52, 7);
-    // MIMUs (back row first)
+    drawRoom(S);
+    // MIMUs in their recliners (back row first)
     const order = [...S.racers].sort((a, b) => a.y - b.y);
-    order.forEach(r => { const img = images[r.spriteId]; const bob = r.out ? 0 : Math.sin(S.time * 3 + r.i) * 3;
-      ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.beginPath(); ctx.ellipse(r.x, r.y + S.spriteW * 0.45, S.spriteW * 0.4, S.spriteW * 0.12, 0, 0, 6.29); ctx.fill();
-      K.drawSprite(ctx, img, r.x + r.jiggle, r.y + bob, S.spriteW, { gray: r.out, alpha: r.out ? 0.55 : 1 });
-      if (r.holding) { ctx.save(); ctx.strokeStyle = "#e83cc8"; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.lineDashOffset = -S.time * 60; ctx.beginPath(); ctx.arc(r.x, r.y, S.spriteW * 0.62, 0, 6.29); ctx.stroke(); ctx.restore(); }
+    order.forEach(r => { const img = images[r.spriteId]; const bob = r.out ? 0 : Math.sin(S.time * 3 + r.i) * 2;
+      drawRecliner(ctx, r.x, r.y, S.spriteW, r.chair, r.out);
+      K.drawSprite(ctx, img, r.x + r.jiggle, r.y + bob - S.spriteW * 0.08, S.spriteW * 0.92, { gray: r.out, alpha: r.out ? 0.55 : 1 });
+      drawFootrest(ctx, r.x, r.y, S.spriteW, r.chair, r.out);
+      if (r.holding) { ctx.save(); ctx.strokeStyle = "#e83cc8"; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.lineDashOffset = -S.time * 60; ctx.beginPath(); ctx.arc(r.x, r.y, S.spriteW * 0.72, 0, 6.29); ctx.stroke(); ctx.restore(); }
     });
     // egg
-    if (S.script && !S.over) drawEgg(ctx, S.egg.x, S.egg.y - S.spriteW * 0.55, S.spriteW * 0.55, S.crack, false);
+    if (S.script && !S.over) drawEgg(ctx, S.egg.x, S.egg.y - S.spriteW * 0.62, S.spriteW * 0.5, S.crack, false);
     if (S.over) { const win = S.racers[S.script.winnerIndex]; if (win) { ctx.save(); ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(win.x, win.y, S.spriteW * 0.7 + Math.sin(S.time * 6) * 4, 0, 6.29); ctx.stroke(); ctx.restore(); } }
     K.drawParticles(S);
     const tagAll = S.laneCount <= 24;

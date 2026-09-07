@@ -59,7 +59,7 @@ window.DerbyRender = (() => {
   function makeScene(canvas, roster, script, laneCount) {
     const { ctx, w, h } = K.fitCanvas(canvas, 0.62, 420, 720);
     const rx = w * 0.44, ry = h * 0.4, cx = w / 2, cy = h / 2 + 8;
-    const carW = laneCount <= 8 ? 62 : laneCount <= 20 ? 50 : laneCount <= 40 ? 38 : 30;
+    const carW = laneCount <= 8 ? 68 : laneCount <= 20 ? 54 : laneCount <= 40 ? 40 : 32;
     const racers = roster.map((r, i) => ({ ...r, i, x: 0, y: 0, ang: 0, hp: 0, out: false, display: 0, progress: 0 }));
     const crowd = Array.from({ length: 160 }, (_, i) => { const a = (i / 160) * 6.283; return { a, r: 1.06 + (i % 3) * 0.035, c: ["#2fa8ff", "#ff8a1f", "#e83cc8", "#ffd23f", "#6b3fb5", "#28c8a0"][i % 6] }; });
     const tires = Array.from({ length: 44 }, (_, i) => (i / 44) * 6.283);
@@ -120,7 +120,7 @@ window.DerbyRender = (() => {
     const order = [...S.racers].sort((a, b) => (a.out === b.out ? a.y - b.y : a.out ? -1 : 1));
     order.forEach(r => { const [x, y] = toPx(S, r.x, r.y); const img = images[r.spriteId]; const dmg = S.script ? 1 - r.hp / (S.script.maxHp[r.i] || 3) : 0;
       ctx.save(); ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(x + 3, y + 4, S.carW * 0.55, S.carW * 0.4, r.ang, 0, 6.29); ctx.fill(); ctx.restore();
-      K.drawSprite(ctx, img, x, y, S.carW, { angle: r.ang + Math.PI / 2, gray: r.out, alpha: r.out ? 0.85 : 1 });
+      K.drawSprite(ctx, img, x, y, S.carW, { angle: r.ang + Math.PI / 2, gray: r.out, alpha: r.out ? 0.85 : 1, smooth: true });
       if (!r.out && S.script && dmg > 0) { ctx.fillStyle = "#fff"; ctx.fillRect(x - 14, y - S.carW * 0.75, 28, 5); ctx.fillStyle = dmg < 0.5 ? "#28c8a0" : dmg < 0.99 ? "#ff8a1f" : "#c8102e"; ctx.fillRect(x - 14, y - S.carW * 0.75, 28 * (1 - dmg), 5); ctx.strokeStyle = INK; ctx.lineWidth = 1; ctx.strokeRect(x - 14, y - S.carW * 0.75, 28, 5); }
     });
     K.drawParticles(S);
