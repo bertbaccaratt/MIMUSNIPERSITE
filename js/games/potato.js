@@ -39,7 +39,7 @@ window.PotatoRender = (() => {
   const CHAIRS = [["#7a4a2e", "#a06a44"], ["#3f6b3a", "#5b8f55"], ["#6b2d3a", "#96404f"], ["#3a4b7a", "#5468a6"], ["#5a4632", "#7d6448"], ["#4a3a6b", "#6a558f"]];
   function makeScene(canvas, roster, script, laneCount) {
     const { ctx, w, h } = K.fitCanvas(canvas, 0.66, 440, 720);
-    const n = roster.length, cx = w / 2, cy = h / 2 + 14, rx = w * 0.40, ry = h * 0.36;
+    const n = roster.length, cx = w / 2, cy = h / 2 + 40, rx = w * 0.40, ry = h * 0.28;
     const spriteW = n <= 8 ? 78 : n <= 16 ? 64 : n <= 30 ? 50 : n <= 50 ? 40 : 32;
     const racers = roster.map((r, i) => { const a = (i / n) * Math.PI * 2 - Math.PI / 2; return { ...r, i, a, x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry, out: false, holding: false, progress: 0, jiggle: 0, chair: CHAIRS[i % CHAIRS.length] }; });
     // deterministic mess so every screen shows the same living room
@@ -47,7 +47,7 @@ window.PotatoRender = (() => {
     const mess = []; const kinds = ["pizza", "can", "can", "sock", "chips", "paper", "slice", "remote", "can", "bowl", "sock", "paper"];
     for (let k = 0; k < Math.min(26, 10 + n); k++) {
       for (let tries = 0; tries < 20; tries++) {
-        const x = 30 + rnd() * (w - 60), y = h * 0.28 + rnd() * (h * 0.7);
+        const x = 30 + rnd() * (w - 60), y = h * 0.26 + rnd() * (h * 0.72);
         const nearChair = racers.some(r => Math.abs(r.x - x) < spriteW * 0.95 && Math.abs(r.y - y) < spriteW * 1.05);
         const nearTable = Math.abs(x - cx) < rx * 0.5 + 30 && Math.abs(y - cy) < ry * 0.5 + 24;
         if (!nearChair && !nearTable) { mess.push({ kind: kinds[k % kinds.length], x, y, rot: (rnd() - 0.5) * 1.2, v: rnd() }); break; }
@@ -144,21 +144,21 @@ window.PotatoRender = (() => {
   function drawRoom(S) {
     const { ctx, w, h, cx, cy, rx, ry } = S;
     // wall + baseboard, then a shaggy rug on a wood floor
-    ctx.fillStyle = "#f0d9a6"; ctx.fillRect(-20, -20, w + 40, h * 0.3 + 20);
-    ctx.fillStyle = "rgba(0,0,0,0.06)"; for (let x = 0; x < w; x += 28) ctx.fillRect(x, -20, 10, h * 0.3 + 20);
-    ctx.fillStyle = "#a9743f"; ctx.fillRect(-20, h * 0.3, w + 40, h); ctx.fillStyle = "rgba(0,0,0,0.12)"; for (let y = h * 0.3; y < h; y += 26) ctx.fillRect(-20, y, w + 40, 2);
-    ctx.fillStyle = "#f7efe1"; ctx.fillRect(-20, h * 0.3 - 10, w + 40, 10); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.strokeRect(-20, h * 0.3 - 10, w + 40, 10);
+    ctx.fillStyle = "#f0d9a6"; ctx.fillRect(-20, -20, w + 40, h * 0.24 + 20);
+    ctx.fillStyle = "rgba(0,0,0,0.06)"; for (let x = 0; x < w; x += 28) ctx.fillRect(x, -20, 10, h * 0.24 + 20);
+    ctx.fillStyle = "#a9743f"; ctx.fillRect(-20, h * 0.24, w + 40, h); ctx.fillStyle = "rgba(0,0,0,0.12)"; for (let y = h * 0.24; y < h; y += 26) ctx.fillRect(-20, y, w + 40, 2);
+    ctx.fillStyle = "#f7efe1"; ctx.fillRect(-20, h * 0.24 - 10, w + 40, 10); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.strokeRect(-20, h * 0.24 - 10, w + 40, 10);
     // window + poster + TV on the wall
-    ctx.fillStyle = "#8fd3ff"; rrect(ctx, w * 0.62, 18, w * 0.2, h * 0.19, 4); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(w * 0.72, 18); ctx.lineTo(w * 0.72, 18 + h * 0.19); ctx.moveTo(w * 0.62, 18 + h * 0.095); ctx.lineTo(w * 0.82, 18 + h * 0.095); ctx.stroke();
-    ctx.fillStyle = "#1a1a24"; ctx.beginPath(); ctx.arc(w * 0.66, 18 + h * 0.06, 6, 0, 6.29); ctx.fill();   // moon
-    ctx.fillStyle = "#e83cc8"; rrect(ctx, w * 0.16, 22, w * 0.13, h * 0.17, 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#fff"; ctx.font = "700 11px Poppins, sans-serif"; ctx.textAlign = "center"; ctx.fillText("WITNESS", w * 0.225, 30 + h * 0.07); ctx.fillText("THEM", w * 0.225, 44 + h * 0.07);
-    ctx.fillStyle = "#222"; rrect(ctx, w * 0.36, 26, w * 0.24, h * 0.17, 6); ctx.fill(); ctx.stroke();
-    const tv = Math.sin(S.time * 8) * 0.5 + 0.5; ctx.fillStyle = `rgb(${40 + tv * 30},${80 + tv * 60},${140 + tv * 60})`; ctx.fillRect(w * 0.37, 32, w * 0.22, h * 0.17 - 12);
-    ctx.fillStyle = "rgba(255,255,255,0.25)"; for (let i = 0; i < 6; i++) ctx.fillRect(w * 0.37, 32 + ((S.time * 40 + i * 17) % (h * 0.17 - 12)), w * 0.22, 2);
-    ctx.fillStyle = "#444"; ctx.fillRect(w * 0.46, 26 + h * 0.17, w * 0.04, 8);
+    ctx.fillStyle = "#8fd3ff"; rrect(ctx, w * 0.62, 18, w * 0.2, h * 0.13, 4); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(w * 0.72, 18); ctx.lineTo(w * 0.72, 18 + h * 0.13); ctx.moveTo(w * 0.62, 18 + h * 0.065); ctx.lineTo(w * 0.82, 18 + h * 0.065); ctx.stroke();
+    ctx.fillStyle = "#1a1a24"; ctx.beginPath(); ctx.arc(w * 0.66, 18 + h * 0.04, 6, 0, 6.29); ctx.fill();   // moon
+    ctx.fillStyle = "#e83cc8"; rrect(ctx, w * 0.16, 22, w * 0.13, h * 0.12, 2); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#fff"; ctx.font = "700 11px Poppins, sans-serif"; ctx.textAlign = "center"; ctx.fillText("WITNESS", w * 0.225, 26 + h * 0.05); ctx.fillText("THEM", w * 0.225, 40 + h * 0.05);
+    ctx.fillStyle = "#222"; rrect(ctx, w * 0.36, 26, w * 0.24, h * 0.12, 6); ctx.fill(); ctx.stroke();
+    const tv = Math.sin(S.time * 8) * 0.5 + 0.5; ctx.fillStyle = `rgb(${40 + tv * 30},${80 + tv * 60},${140 + tv * 60})`; ctx.fillRect(w * 0.37, 32, w * 0.22, h * 0.12 - 12);
+    ctx.fillStyle = "rgba(255,255,255,0.25)"; for (let i = 0; i < 6; i++) ctx.fillRect(w * 0.37, 32 + ((S.time * 40 + i * 17) % (h * 0.12 - 12)), w * 0.22, 2);
+    ctx.fillStyle = "#444"; ctx.fillRect(w * 0.46, 26 + h * 0.12, w * 0.04, 8);
     // rug
-    ctx.fillStyle = "#6b3fb5"; ctx.beginPath(); ctx.ellipse(cx, cy + 10, rx * 1.28, ry * 1.34, 0, 0, 6.29); ctx.fill(); ctx.lineWidth = 4; ctx.stroke();
-    ctx.strokeStyle = "#e83cc8"; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.ellipse(cx, cy + 10, rx * 1.15, ry * 1.2, 0, 0, 6.29); ctx.stroke(); ctx.setLineDash([]); ctx.strokeStyle = INK;
+    ctx.fillStyle = "#6b3fb5"; ctx.beginPath(); ctx.ellipse(cx, cy + 20, rx * 1.22, ry * 1.5, 0, 0, 6.29); ctx.fill(); ctx.lineWidth = 4; ctx.stroke();
+    ctx.strokeStyle = "#e83cc8"; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.ellipse(cx, cy + 20, rx * 1.1, ry * 1.35, 0, 0, 6.29); ctx.stroke(); ctx.setLineDash([]); ctx.strokeStyle = INK;
     K.halftone(S, 0.08, 1.2, 9);
     // coffee table with the mess of the century
     ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.beginPath(); ctx.ellipse(cx + 4, cy + 10, rx * 0.5, ry * 0.42, 0, 0, 6.29); ctx.fill();
@@ -189,7 +189,7 @@ window.PotatoRender = (() => {
     const order = [...S.racers].sort((a, b) => a.y - b.y);
     order.forEach(r => { const img = images[r.spriteId]; const bob = r.out ? 0 : Math.sin(S.time * 3 + r.i) * 2;
       drawRecliner(ctx, r.x, r.y, S.spriteW, r.chair, r.out);
-      K.drawSprite(ctx, img, r.x + r.jiggle, r.y + bob - S.spriteW * 0.08, S.spriteW * 0.92, { gray: r.out, alpha: r.out ? 0.55 : 1 });
+      K.drawSprite(ctx, img, r.x + r.jiggle, r.y + bob - S.spriteW * 0.1, S.spriteW * 1.02, { gray: r.out, alpha: r.out ? 0.55 : 1 });
       drawFootrest(ctx, r.x, r.y, S.spriteW, r.chair, r.out);
       if (r.holding) { ctx.save(); ctx.strokeStyle = "#e83cc8"; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.lineDashOffset = -S.time * 60; ctx.beginPath(); ctx.arc(r.x, r.y, S.spriteW * 0.72, 0, 6.29); ctx.stroke(); ctx.restore(); }
     });

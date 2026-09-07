@@ -115,7 +115,7 @@ window.MarbleRender = (() => {
     }
     const lead = S.racers.reduce((a, b) => (b.y > a.y ? b : a));
     const targetCam = K.clamp(lead.y * S.scale - S.h * 0.42, 0, S.worldH * S.scale - S.h);
-    S.cam += (targetCam - S.cam) * (1 - Math.exp(-dt * 4));
+    S.cam += (targetCam - S.cam) * (1 - Math.exp(-dt * 4)); if (Math.abs(targetCam - S.cam) > S.h * 0.8) S.cam = targetCam;
     K.stepParticles(S, dt); K.stepConfetti(S);
   }
   function snapToEnd(S) { apply(S, 1); S.over = true; S.cam = S.worldH * S.scale - S.h; S.lastFi = S.script.frames.length; }
